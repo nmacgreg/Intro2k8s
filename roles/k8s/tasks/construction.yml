@@ -1,0 +1,84 @@
+---
+
+# This is for Ubuntu only, eh? 
+ - name: Set up kernel modules
+   copy: 
+    src: containerd.conf
+    dest: /etc/modules-load.d/
+    owner: root
+    group: root
+
+ - name: modprobe those kernel modules immediately
+   modprobe: 
+     name: "{{ item }}"
+   loop:
+     - overlay
+     - br_netfilter
+
+ - name: setup sysctl networking primitives, bridging
+   copy: 
+    src: 99-kubernetes-cri.conf
+    dest: /etc/sysctl.d/
+    owner: root
+    group: root
+
+ - name: sysctl take effect immediately
+   command:  /sbin/sysctl --system
+
+ - name: Install containerd
+   apt: 
+     name: containerd
+     state: present
+
+ - name: Create /etc/containerd
+   file: 
+     name: /etc/containerd
+     state: directory
+     mode: '0755'
+
+ - name: populate config.toml for containerd
+   shell: containerd config default > /etc/containerd/config.toml
+   args:
+     creates: /etc/containerd/config.toml
+   register: containerd_pump
+
+ - name: Restart containerd
+   systemd: 
+     name: containerd
+     state: restarted
+   when: containerd_pump.changed
+
+ - name: Allergic to swap
+   command:  swapoff -a
+
+     # These VM's don't have swap, skipping
+     # sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+
+ - name: More packages
+   apt:
+     name: ["apt-transport-https", "curl"]
+     state: present
+
+ - name: Install GPG key for googles k8s package repo
+   shell: curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+ - name: Add source for googles k8s package repo
+   copy: 
+     src: kubernetes.list
+     dest: /etc/apt/sources.list.d
+
+ - name: Install Googles packages for k8s
+   apt:
+     name: ["kubelet=1.22.0-00", "kubeadm=1.22.0-00", "kubectl=1.22.0-00"]
+     state: present
+     update_cache: yes
+
+ - name: Prevent k8s packages from being updated
+   dpkg_selections:
+     name: "{{ item }}"
+     selection: hold
+   loop: 
+     - kubelet
+     - kubeadm
+     - kubectl
+

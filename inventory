@@ -1,0 +1,10 @@
+[control]
+control1 k8sRole=control
+
+[workers]
+worker1 k8sRole=worker
+worker2 k8sRole=worker
+
+[k8s:children]
+control
+workers

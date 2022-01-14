@@ -1,0 +1,50 @@
+---
+
+# ACG's lab makes it clear that the first step is only to be performed on the Control Plane node, but it's less clear 
+# about whether the next two steps are *only* to be performed there...
+
+ # https://stackoverflow.com/questions/57808932/setup-kubernetes-using-ansible#57809390
+ - name: Initialize the cluster, this takes some time, only on the control node
+   command: kubeadm init --pod-network-cidr 192.168.0.0/16 --kubernetes-version 1.22.0
+   args: 
+    creates: /etc/kubernetes/admin.conf   # idempotency
+
+ - name: Create user's .kube directory, only on the control node
+   become: yes
+   become_user: cloud_user
+   file:
+     path: $HOME/.kube
+     state: directory
+     mode: 0755
+   when: k8sRole == "control"
+   
+ - name: Copy kubernetes admin.conf to the users .kube directory, only on the control node
+   copy:
+     src: /etc/kubernetes/admin.conf
+     dest: /home/cloud_user/.kube/config
+     owner: cloud_user
+     group: cloud_user
+     remote_src: yes
+   when: k8sRole == "control"
+
+ # This is clearly *only* on the control plane node, as the 'cloud_user' ID
+ - name: Install Calico network addon, as cloud_user
+   become: yes
+   become_user: cloud_user
+   command: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+   when: k8sRole == "control"
+     # I don't know how to make this idempotent!
+
+ - name: On Control Plane, as cloud_user, create a token that can be used to join the cluster
+   become: yes
+   become_user: cloud_user
+   command: kubeadm token create --print-join-command
+   when: k8sRole == "control"
+   register: join_command
+     # I don't know how to make this idempotent!
+
+ - name: On Worker nodes, as root, issue the command to join the cluster
+   command:  join_command.stdout 
+   register: joined_or_not
+   when: k8sRole == "worker"
+     # I don't know how to make this idempotent!
