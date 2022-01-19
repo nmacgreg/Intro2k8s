@@ -44,8 +44,14 @@
    register: join_command
      # I don't know how to make this idempotent!
 
+ - name: Run this on both worker nodes...
+   debug: 
+    var: join_command.stdout
+   when: k8sRole == "control"
+
  - name: On Worker nodes, as root, issue the command to join the cluster
    command:  join_command.stdout 
    register: joined_or_not
    when: k8sRole == "worker"
+
      # I don't know how to make this idempotent!
