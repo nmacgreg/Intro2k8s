@@ -8,6 +8,7 @@
    command: kubeadm init --pod-network-cidr 192.168.0.0/16 --kubernetes-version 1.22.0
    args: 
     creates: /etc/kubernetes/admin.conf   # idempotency
+   when: k8sRole == "control"
 
  - name: Create user's .kube directory, only on the control node
    become: yes
@@ -28,7 +29,7 @@
    when: k8sRole == "control"
 
  # This is clearly *only* on the control plane node, as the 'cloud_user' ID
- - name: Install Calico network addon, as cloud_user
+ - name: Install Calico network addon, as cloud_user, only on the control node
    become: yes
    become_user: cloud_user
    command: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
