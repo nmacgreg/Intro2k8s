@@ -8,8 +8,10 @@
 
 * Call this playbook:
 
-```ansible-playbook -i inventory k8sUbuntu.yml -e "ansible_become_password=<redacted>"```
-```ansible-playbook -i inventory k8sUbuntu.yml -e "ansible_become_password=<redacted>" --tags initialize```
+```
+ansible-playbook -i inventory k8sUbuntu.yml -e "ansible_become_password=<redacted>"
+ansible-playbook -i inventory k8sUbuntu.yml -e "ansible_become_password=<redacted>" --tags initialize
+```
 
 ## Status: 
 
